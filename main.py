@@ -145,6 +145,7 @@ class PreviewWindow:
         self.base_image = image
         self.annotated_image = image.copy()
         self.scale = 1.0
+        self.alpha = 1.0
         self.last_point = None
         self.min_width = 140
         self.min_height = 90
@@ -176,6 +177,7 @@ class PreviewWindow:
         self.menu.add_command(label="ズームアウト", command=self.zoom_out)
 
         self.canvas.bind("<Button-3>", self.show_menu)
+        self.canvas.bind("<MouseWheel>", self.on_scroll)
         self.canvas.bind("<Control-ButtonPress-1>", self.on_ctrl_press)
         self.canvas.bind("<Control-B1-Motion>", self.on_ctrl_drag)
         self.canvas.bind("<Control-ButtonRelease-1>", self.on_ctrl_release)
@@ -200,6 +202,14 @@ class PreviewWindow:
         self.canvas.config(scrollregion=(0, 0, image_width, image_height))
         self.canvas.config(width=window_width, height=window_height)
         self.window.geometry(f"{window_width}x{window_height}")
+
+    def on_scroll(self, event: tk.Event) -> None:
+        step = 0.05
+        if event.delta > 0:
+            self.alpha = min(1.0, self.alpha + step)
+        elif event.delta < 0:
+            self.alpha = max(0.1, self.alpha - step)
+        self.window.attributes("-alpha", self.alpha)
 
     def show_menu(self, event: tk.Event) -> None:
         self.menu.tk_popup(event.x_root, event.y_root)

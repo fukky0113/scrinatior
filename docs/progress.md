@@ -1,20 +1,14 @@
-# 作業進捗表：拡張画面キャプチャ対応
+# 作業進捗表
 
-## 問題概要
+---
+
+## 1. 拡張画面キャプチャ対応
+
+### 問題概要
 
 現状、`ScreenshotOverlay` のオーバーレイが `winfo_screenwidth()` / `winfo_screenheight()` を使用しており、プライマリディスプレイのサイズしか返さないため、拡張ディスプレイ上の範囲を選択・キャプチャできない。
 
-### 該当箇所
-
-`main.py` — `App.start_capture()` 内:
-
-```python
-overlay.geometry(
-    f"{overlay.winfo_screenwidth()}x{overlay.winfo_screenheight()}+0+0"
-)
-```
-
-## タスク一覧
+### タスク一覧
 
 | # | タスク | 状態 | 概要 |
 |---|--------|------|------|
@@ -25,18 +19,40 @@ overlay.geometry(
 | 5 | 依存パッケージの確認 | 完了 | 追加パッケージなし（`ctypes` は Python 標準ライブラリ） |
 | 6 | ドキュメント更新 | 完了 | README.md / docs にマルチモニター対応・Windows 動作環境を反映 |
 
-## 修正内容まとめ
-
-### 方針
+### 修正内容まとめ
 
 - 追加パッケージを使わず、Python 標準ライブラリの `ctypes` で Windows の `user32.dll` を直接呼び出す
 - macOS（開発環境）では `winfo_screenwidth()` / `winfo_screenheight()` によるフォールバック
 
-### 変更ファイル
+---
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `main.py` | `ctypes`/`sys` インポート追加、`get_virtual_screen_bounds()` を Windows API ベースに実装、`start_capture()` のジオメトリ計算を全画面対応に変更、`ImageGrab.grab()` に `all_screens=True` を追加 |
-| `README.md` | マルチモニター対応の記載追加、動作環境を Windows 10 以降に変更 |
-| `docs/architecture.md` | 外部依存を更新 |
-| `docs/modules.md` | `get_virtual_screen_bounds()` の仕様を更新、外部依存を更新 |
+## 2. プレビュー画面の透明度調整機能
+
+### 概要
+
+プレビュー画面（`PreviewWindow`）上で、マウスのスクロールホイール操作によりウィンドウの透明度をリアルタイムに変更できるようにする。透明度を上げることで、プレビュー画像越しに背面のウィンドウを確認しながら作業できる。複数のプレビュー画面が存在する場合、それぞれ独立して透明度を調整可能。
+
+### 該当箇所
+
+`main.py` — `PreviewWindow.__init__()` 内。現在 `-alpha` は未設定（デフォルト 1.0 = 完全不透明）:
+
+```python
+self.window = tk.Toplevel(app.root)
+self.window.title("Screenshot Preview")
+self.window.resizable(False, False)
+```
+
+### タスク一覧
+
+| # | タスク | 状態 | 概要 |
+|---|--------|------|------|
+| 1 | マウス操作の決定 | 完了 | スクロールホイールで透明度を増減する方式を採用（右クリックメニュー・Ctrl+ドラッグ描画と競合しない） |
+| 2 | 透明度変更ロジックの実装 | 完了 | `PreviewWindow` に `<MouseWheel>` イベントをバインドし、`-alpha` 属性をリアルタイムに更新 |
+| 3 | 透明度の範囲制限 | 完了 | 0.1（ほぼ透明）〜 1.0（完全不透明）にクランプ、1ノッチあたり 0.05 刻み |
+| 4 | ドキュメント更新 | 完了 | README.md の操作早見表・主な機能、docs/modules.md を更新 |
+
+### 備考
+
+- 現在スクロールホイールには何もバインドされていないため、競合なし
+- ズーム操作は右クリックメニューから行うため、スクロールとの混同は生じない
+- 各 `PreviewWindow` は個別の `tk.Toplevel` なので、透明度は画面ごとに独立して管理される
