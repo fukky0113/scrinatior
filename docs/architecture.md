@@ -54,3 +54,4 @@
 
 - Tkinter: GUI/イベント
 - Pillow: 画面キャプチャ/画像描画/表示
+- ctypes + user32.dll: マルチモニターの仮想スクリーン情報取得（Windows、標準ライブラリ）

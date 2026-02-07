@@ -1,7 +1,30 @@
+import ctypes
+import sys
 import tkinter as tk
 from tkinter import filedialog
 
 from PIL import ImageDraw, ImageGrab, ImageTk
+
+
+def get_virtual_screen_bounds(fallback_widget: tk.Widget) -> tuple[int, int, int, int]:
+    """全ディスプレイを包含する仮想スクリーンの原点とサイズを返す。
+
+    Windows では user32.dll の GetSystemMetrics を使用し、
+    それ以外の環境ではプライマリディスプレイのサイズをフォールバックとして返す。
+
+    Returns:
+        (x, y, width, height) — 仮想スクリーン全体の原点とサイズ
+    """
+    if sys.platform == "win32":
+        user32 = ctypes.windll.user32
+        return (
+            user32.GetSystemMetrics(76),  # SM_XVIRTUALSCREEN
+            user32.GetSystemMetrics(77),  # SM_YVIRTUALSCREEN
+            user32.GetSystemMetrics(78),  # SM_CXVIRTUALSCREEN
+            user32.GetSystemMetrics(79),  # SM_CYVIRTUALSCREEN
+        )
+    # macOS/Linux: プライマリディスプレイのみ（開発用フォールバック）
+    return 0, 0, fallback_widget.winfo_screenwidth(), fallback_widget.winfo_screenheight()
 
 
 class ScreenshotOverlay:
@@ -23,7 +46,7 @@ class ScreenshotOverlay:
         self.window.bind("<ButtonPress-3>", lambda _e: self.window.destroy())
 
     def _capture(self, left: int, top: int, right: int, bottom: int) -> None:
-        image = ImageGrab.grab(bbox=(left, top, right, bottom))
+        image = ImageGrab.grab(bbox=(left, top, right, bottom), all_screens=True)
         self.on_capture(image)
         self.window.destroy()
 
@@ -91,14 +114,14 @@ class App:
             self.root.destroy()
 
     def start_capture(self) -> None:
+        vx, vy, vw, vh = get_virtual_screen_bounds(self.root)
+
         overlay = tk.Toplevel(self.root)
         overlay.title("Screenshot Selector")
         overlay.attributes("-topmost", True)
         overlay.attributes("-alpha", 0.3)
         overlay.overrideredirect(True)
-        overlay.geometry(
-            f"{overlay.winfo_screenwidth()}x{overlay.winfo_screenheight()}+0+0"
-        )
+        overlay.geometry(f"{vw}x{vh}+{vx}+{vy}")
 
         self.register_window(overlay)
         ScreenshotOverlay(overlay, self.show_preview)

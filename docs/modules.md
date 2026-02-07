@@ -7,6 +7,7 @@
 | 要素 | 種別 | 役割 |
 | --- | --- | --- |
 | `main()` | 関数 | アプリ起動、初期画面表示 |
+| `get_virtual_screen_bounds()` | 関数 | 全ディスプレイを包含する仮想スクリーンの原点とサイズを返す |
 | `App` | クラス | ウィンドウ管理と画面遷移 |
 | `ScreenshotOverlay` | クラス | 範囲選択用オーバーレイ |
 | `PreviewWindow` | クラス | 撮影画像のプレビュー/編集 |
@@ -26,7 +27,20 @@
 - `App.start_capture()` を呼び出し、範囲選択を開始
 - `root.mainloop()` でイベントループ実行
 
-### 2.2 `App`
+### 2.2 `get_virtual_screen_bounds()`
+
+| 項目 | 内容 |
+| --- | --- |
+| 入力 | `fallback_widget: tk.Widget` — 非Windows環境でのフォールバック用ウィジェット |
+| 出力 | `(x, y, width, height)` — 仮想スクリーン全体の原点とサイズ |
+| 役割 | Windows では `user32.dll` の `GetSystemMetrics` で全ディスプレイの仮想スクリーン情報を取得する |
+
+補足:
+- Windows: `SM_XVIRTUALSCREEN` (76), `SM_YVIRTUALSCREEN` (77), `SM_CXVIRTUALSCREEN` (78), `SM_CYVIRTUALSCREEN` (79) を使用
+- プライマリの左側にあるディスプレイは負の x 座標を持つ
+- macOS/Linux: `winfo_screenwidth()` / `winfo_screenheight()` によるプライマリディスプレイのみのフォールバック
+
+### 2.3 `App`
 
 | 項目 | 内容 |
 | --- | --- |
@@ -36,13 +50,13 @@
 主要メソッド:
 - `register_window(window)`: ウィンドウ登録と終了監視
 - `close_window(window)`: 指定ウィンドウを閉じる
-- `start_capture()`: オーバーレイを表示し範囲選択へ
+- `start_capture()`: 全ディスプレイを覆うオーバーレイを表示し範囲選択へ
 - `show_preview(image)`: プレビュー画面を開く
 
 終了条件:
 - 登録ウィンドウがすべて閉じられた時にアプリ終了
 
-### 2.3 `ScreenshotOverlay`
+### 2.4 `ScreenshotOverlay`
 
 | 項目 | 内容 |
 | --- | --- |
@@ -58,7 +72,7 @@
 補足:
 - オーバーレイは撮影直前に `withdraw()` して写り込みを防止
 
-### 2.4 `PreviewWindow`
+### 2.5 `PreviewWindow`
 
 | 項目 | 内容 |
 | --- | --- |
@@ -80,7 +94,13 @@
 - 範囲サイズが極小の場合は撮影をキャンセル
 - 保存ダイアログのキャンセルは無処理
 
-## 4. 今後の拡張候補（任意）
+## 4. 外部依存
+
+- Tkinter: GUI/イベント
+- Pillow: 画面キャプチャ/画像描画/表示
+- ctypes + user32.dll: マルチモニターの仮想スクリーン情報取得（Windows、標準ライブラリ）
+
+## 5. 今後の拡張候補（任意）
 
 - Undo/Redoの追加
 - 図形/テキストの注釈
